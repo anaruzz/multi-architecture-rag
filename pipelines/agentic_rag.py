@@ -13,13 +13,12 @@ from typing import TypedDict
 # Load env
 load_dotenv("../.env")
 
-# === Load retriever ===
+# Retriever
 FAISS_DIR = "../faiss_index"
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
 retriever = vectorstore.as_retriever()
 
-# === Define retriever tool ===
 def retriever_tool_func(query: str) -> str:
     docs = retriever.invoke(query)
     return "\n\n".join(doc.page_content for doc in docs[:3]) if docs else "No documents found."
@@ -32,7 +31,7 @@ search_docs_tool = Tool(
 
 tools = [search_docs_tool]
 
-# === LLM ===
+# LLM loading
 llm = OllamaLLM(model="mistral")
 
 prompt = PromptTemplate.from_template(
@@ -58,12 +57,12 @@ Question: {input}"""
 )
 
 
-# === Create ReAct agent chain
+# ReAct agent chain
 agent_chain = create_react_agent(llm=llm, tools=tools, prompt=prompt)
 agent_executor = AgentExecutor(agent=agent_chain, tools=tools, verbose=True)
 
 
-# LangGraph set up
+# LangGraph setup
 class AgentState(TypedDict):
     input: str
 
