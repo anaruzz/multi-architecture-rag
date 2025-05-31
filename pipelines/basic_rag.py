@@ -34,7 +34,7 @@ Question:
 
 
 # llm initialization
-llm = OllamaLLM(model="mistral")
+llm = OllamaLLM(model="openchat")
 
 
 # QA Chain
@@ -58,3 +58,4 @@ if __name__ == "__main__":
     query = "What are the configuration steps for VLAN on a Cisco switch?"
     result = run_query(query)
     print("Answer:", result)
+    

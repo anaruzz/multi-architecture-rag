@@ -22,8 +22,8 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
-# LLM initialization
-llm = OllamaLLM(model="mistral")
+# LLM
+llm = OllamaLLM(model="openchat")
 
 
 subquery_prompt = PromptTemplate.from_template("""

@@ -6,3 +6,4 @@ langchain-huggingface
 langchain-ollama
 langsmith
 langchain-openai
+langgraph
