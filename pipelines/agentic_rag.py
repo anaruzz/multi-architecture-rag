@@ -8,6 +8,7 @@ from langchain.agents import Tool, AgentExecutor, create_react_agent
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
+from langsmith import traceable
 
 
 load_dotenv("../.env")
@@ -85,7 +86,7 @@ class AgentState(TypedDict):
     input: str
     output: str
 
-
+@traceable(name="Agentic RAG Run")
 def run_agent(state: AgentState) -> AgentState:
     try:
         result = agent_executor.invoke({"input": state["input"]})
@@ -104,5 +105,5 @@ graph = graph_builder.compile()
 # Run test query
 if __name__ == "__main__":
     query = "What are the configuration steps for VLAN on a Cisco switch?"
-    result = graph.invoke({"input": query, "output": ""}, config=RunnableConfig(tags=["langgraph", "agentic"]))
+    result = graph.invoke({"input": query, "output": ""}, config=RunnableConfig(tags=["langGraph", "agentic"], run_name="Agentic RAG Trace"))
     print("\nFinal Answer:\n", result.get("output", "No output returned from graph."))
