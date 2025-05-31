@@ -5,12 +5,11 @@ from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import OllamaLLM
 from langchain.agents import Tool, AgentExecutor, create_react_agent
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
 
-# Load environment variables
+
 load_dotenv("../.env")
 
 # Embedding + Vectorstore setup
@@ -32,15 +31,11 @@ search_docs_tool = Tool(
 )
 
 tools = [search_docs_tool]
+
+# LLM
 llm = OllamaLLM(model="openchat")
 
-# ReAct prompt with guardrails to prevent Final Answer + Action together
-from langchain.agents.format_scratchpad import format_to_openai_function_messages
-
-tool_names = ", ".join([tool.name for tool in tools])
-
-from langchain_core.prompts import PromptTemplate
-
+# ReAct prompt
 tool_names = ", ".join([tool.name for tool in tools])
 
 prompt = PromptTemplate(
@@ -74,11 +69,7 @@ Question: {input}
 )
 
 
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
-
-output_parser = ReActSingleInputOutputParser(strict=False)
-
-# Create agent
+# Agent
 agent_chain = create_react_agent(llm=llm, tools=tools, prompt=prompt)
 
 agent_executor = AgentExecutor(
@@ -86,32 +77,21 @@ agent_executor = AgentExecutor(
     tools=tools,
     verbose=True,
     handle_parsing_errors=True,
-    output_parser=output_parser,
     max_iterations=5
 )
 
-# Define state
+# Define LangGraph state
 class AgentState(TypedDict):
     input: str
     output: str
 
-import re
-
-def clean_final_answer(output: str) -> str:
-    # Extract only the last valid Final Answer block
-    matches = re.findall(r"Final Answer:(.*?)(?=(\n[A-Z][a-z]+:|\Z))", output, re.DOTALL)
-    if matches:
-        return "Final Answer:" + matches[-1][0].strip()
-    return output.strip()
 
 def run_agent(state: AgentState) -> AgentState:
     try:
         result = agent_executor.invoke({"input": state["input"]})
-        raw_output = result.get("output") or result.get("result") or str(result)
-        cleaned = clean_final_answer(raw_output)
+        return {"input": state["input"], "output": result}
     except Exception as e:
-        cleaned = f"[Agent Error] {str(e)}"
-    return {"input": state["input"], "output": cleaned}
+        return {"input": state["input"], "output": f"[Agent Error] {str(e)}"}
 
 
 # Build LangGraph
