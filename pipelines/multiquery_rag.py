@@ -20,7 +20,7 @@ load_dotenv(dotenv_path="../.env")
 # Load Vector Store
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 # LLM
 llm = OllamaLLM(model="openchat")
@@ -52,19 +52,26 @@ Question:
 """)
 
 @traceable(name="MultiQuery RAG Trace")
-def generate_answer(query: str) -> str:
+def run_multiquery_rag(query: str) -> dict:
     docs = docs = multi_retriever.invoke(query)
     print(f"Retrieved {len(docs)} documents from multi-query retrieval.\n")
 
     context = "\n\n".join(doc.page_content for doc in docs)
     filled_prompt = final_prompt.format(context=context, question=query)
 
-    return llm.invoke(filled_prompt)
+    answer = llm.invoke(filled_prompt)
+    return {
+        "question": query,
+        "generated_answer": answer,
+        "contexts": [doc.page_content for doc in docs]
+    }
 
 
 if __name__ == "__main__":
-    query = "How do I configure VLANs on a Cisco switch?"
-    answer = generate_answer(query)
+    query = "How do I configure a VLAN on a Cisco switch?"
+    result = run_multiquery_rag(query)
 
-    print("Final Answer:\n")
-    print(answer)
+    print("\nFinal Answer:\n", result["generated_answer"])
+    print("\nRetrieved Contexts:")
+    for i, ctx in enumerate(result["contexts"], 1):
+        print(f"\nContext {i}:\n{ctx}")

@@ -18,7 +18,7 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
 
 # Retriever
-retriever = vectorstore.as_retriever()
+retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 
 # Prompt Template
@@ -37,25 +37,37 @@ Question:
 llm = OllamaLLM(model="openchat")
 
 
-# QA Chain
-qa = RetrievalQA.from_chain_type(
-    llm=llm,
-    retriever=retriever,
-    chain_type="stuff", 
-    chain_type_kwargs={"prompt": prompt}
-)
-
 
 @traceable(name="Basic RAG Query Trace")
-def run_query(query: str) -> str:
-    return qa.invoke({"query": query})
+def run_query(query: str) -> dict:
+    # Step 1: retrieve docs
+    docs = retriever.invoke(query)
+    
+    # Step 2: build context
+    context = "\n\n".join(doc.page_content for doc in docs)
+    
+    # Step 3: generate answer
+    filled_prompt = prompt.format(context=context, question=query)
+    answer = llm.invoke(filled_prompt)
+
+    # Step 4: return structured result
+    return {
+        "question": query,
+        "generated_answer": answer,
+        "contexts": [doc.page_content for doc in docs]
+    }
 
 
 
 
 
 if __name__ == "__main__":
-    query = "What are the configuration steps for VLAN on a Cisco switch?"
+    query = "Whow to configure a Vlan on a cisco switch?"
     result = run_query(query)
     print("Answer:", result)
+
+    print("\nGenerated Answer:\n", result["generated_answer"])
+    print("\nRetrieved Contexts:")
+    for i, ctx in enumerate(result["contexts"], 1):
+        print(f"\nContext {i}:\n{ctx}")
     

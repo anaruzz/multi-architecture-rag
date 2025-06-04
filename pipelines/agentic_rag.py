@@ -17,11 +17,16 @@ load_dotenv("../.env")
 FAISS_DIR = "../faiss_index"
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
-retriever = vectorstore.as_retriever()
+retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
-# Tool function
+
+last_retrieved_docs = []
+
+# retriever tool function
 def retriever_tool_func(query: str) -> str:
+    global last_retrieved_docs
     docs = retriever.invoke(query)
+    last_retrieved_docs = docs
     return "\n\n".join(doc.page_content for doc in docs[:3]) if docs else "No documents found."
 
 # Tool config
@@ -88,12 +93,8 @@ class AgentState(TypedDict):
 
 @traceable(name="Agentic RAG Run")
 def run_agent(state: AgentState) -> AgentState:
-    try:
-        result = agent_executor.invoke({"input": state["input"]})
-        return {"input": state["input"], "output": result}
-    except Exception as e:
-        return {"input": state["input"], "output": f"[Agent Error] {str(e)}"}
-
+    result = agent_executor.invoke({"input": state["input"]})
+    return {"input": state["input"], "output": result}
 
 # Build LangGraph
 graph_builder = StateGraph(state_schema=AgentState)
@@ -104,6 +105,14 @@ graph = graph_builder.compile()
 
 # Run test query
 if __name__ == "__main__":
-    query = "What are the configuration steps for VLAN on a Cisco switch?"
-    result = graph.invoke({"input": query, "output": ""}, config=RunnableConfig(tags=["langGraph", "agentic"], run_name="Agentic RAG Trace"))
-    print("\nFinal Answer:\n", result.get("output", "No output returned from graph."))
+    query = "How do I configure a VLAN on a Cisco switch?"
+    result = graph.invoke(
+        {"input": query, "output": ""},
+        config=RunnableConfig(tags=["langGraph", "agentic"], run_name="Agentic RAG Trace")
+    )
+    
+    print("\nFinal Answer:\n", result["output"])
+
+    print("\nRetrieved Contexts:")
+    for i, doc in enumerate(last_retrieved_docs, 1):
+        print(f"\nContext {i}:\n{doc.page_content}")
