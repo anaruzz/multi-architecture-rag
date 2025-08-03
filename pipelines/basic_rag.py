@@ -7,7 +7,10 @@ from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
 from langsmith import traceable
 
-FAISS_DIR = "../faiss_index"
+# FAISS Path
+FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
+FAISS_DIR = os.path.abspath(FAISS_DIR)
+
 
 # Load .env variables
 load_dotenv(dotenv_path="../.env") 
@@ -62,7 +65,7 @@ def run_query(query: str) -> dict:
 
 
 if __name__ == "__main__":
-    query = "Whow to configure a Vlan on a cisco switch?"
+    query = "How to configure a Vlan on a cisco switch?"
     result = run_query(query)
     print("Answer:", result)
 

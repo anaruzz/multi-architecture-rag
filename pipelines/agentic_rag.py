@@ -13,8 +13,12 @@ from langsmith import traceable
 
 load_dotenv("../.env")
 
+# FAISS Path
+FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
+FAISS_DIR = os.path.abspath(FAISS_DIR)
+
+
 # Embedding + Vectorstore setup
-FAISS_DIR = "../faiss_index"
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})

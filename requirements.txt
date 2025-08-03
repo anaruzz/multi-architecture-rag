@@ -7,3 +7,5 @@ langchain-ollama
 langsmith
 langchain-openai
 langgraph
+ragas
+langchain_community

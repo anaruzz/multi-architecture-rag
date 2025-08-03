@@ -10,14 +10,15 @@ from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_core.documents import Document
 
 
-FAISS_DIR = "../faiss_index"
-
+# FAISS Path
+FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
+FAISS_DIR = os.path.abspath(FAISS_DIR)
 
 # Load .env variables
 load_dotenv(dotenv_path="../.env") 
 
 
-# Load Vector Store
+# Load FAISS Vector Store
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
