@@ -7,4 +7,9 @@ langchain-ollama
 langsmith
 langchain-openai
 langgraph
+<<<<<<< HEAD
 ragas
+=======
+ragas
+langchain_community
+>>>>>>> 8490c381803503fd8c142b3f39f8033cc2ab7001

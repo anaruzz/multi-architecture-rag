@@ -9,7 +9,10 @@ from langsmith import traceable
 import pandas as pd
 import json
 
-FAISS_DIR = "../faiss_index"
+# FAISS Path
+FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
+FAISS_DIR = os.path.abspath(FAISS_DIR)
+
 
 # Load .env variables
 load_dotenv(dotenv_path="../.env") 
@@ -63,8 +66,14 @@ def run_query(query: str) -> dict:
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     input_path = "../Questions_and_Reference_Answers_100.csv"
     output_path = "../output/basic_rag_output.csv"
+=======
+    query = "How to configure a Vlan on a cisco switch?"
+    result = run_query(query)
+    print("Answer:", result)
+>>>>>>> 8490c381803503fd8c142b3f39f8033cc2ab7001
 
     df = pd.read_csv(input_path)
     df["basic_rag_answer"] = ""
