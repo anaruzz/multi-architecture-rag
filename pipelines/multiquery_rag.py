@@ -8,6 +8,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_core.documents import Document
+import pandas as pd
 
 
 FAISS_DIR = "../faiss_index"
@@ -68,10 +69,28 @@ def run_multiquery_rag(query: str) -> dict:
 
 
 if __name__ == "__main__":
-    query = "How do I configure a VLAN on a Cisco switch?"
-    result = run_multiquery_rag(query)
+    input_path = "../Questions_and_Reference_Answers_100.csv"
+    output_path = "../output/multiquery_rag_output.csv"
 
-    print("\nFinal Answer:\n", result["generated_answer"])
-    print("\nRetrieved Contexts:")
-    for i, ctx in enumerate(result["contexts"], 1):
-        print(f"\nContext {i}:\n{ctx}")
+    df = pd.read_csv(input_path)
+
+    df["multiquery_rag_answer"] = ""
+    df["multiquery_rag_grounding"] = ""
+
+    total = len(df)
+    for row_number, (idx, row) in enumerate(df.iterrows(), start=1):
+        query = row["query"]
+        result = run_multiquery_rag(query)
+
+        df.at[idx, "multiquery_rag_answer"] = result["generated_answer"]
+        df.at[idx, "multiquery_rag_grounding"] = "\n\n".join(result["contexts"])
+
+        print(f"✅ [{row_number}] Query done: {query[:60]}...")
+        print(f"📊 Progress: {row_number}/{total} queries completed.\n")
+
+        if row_number % 10 == 0:
+            df.to_csv(output_path, index=False)
+            print(f"💾 Intermediate save at query {row_number}...\n")
+
+    df.to_csv(output_path, index=False)
+    print(f"\n✅ All done. Results saved to: {output_path}")

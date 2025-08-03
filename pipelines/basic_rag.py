@@ -6,6 +6,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
 from langsmith import traceable
+import pandas as pd
+import json
 
 FAISS_DIR = "../faiss_index"
 
@@ -60,14 +62,24 @@ def run_query(query: str) -> dict:
 
 
 
-
 if __name__ == "__main__":
-    query = "Whow to configure a Vlan on a cisco switch?"
-    result = run_query(query)
-    print("Answer:", result)
+    input_path = "../Questions_and_Reference_Answers_100.csv"
+    output_path = "../output/basic_rag_output.csv"
 
-    print("\nGenerated Answer:\n", result["generated_answer"])
-    print("\nRetrieved Contexts:")
-    for i, ctx in enumerate(result["contexts"], 1):
-        print(f"\nContext {i}:\n{ctx}")
-    
+    df = pd.read_csv(input_path)
+    df["basic_rag_answer"] = ""
+    df["basic_rag_grounding"] = ""
+
+    total = len(df)
+
+    for row_number, (idx, row) in enumerate(df.iterrows(), start=1):
+        query = row["query"]
+        result = run_query(query)
+
+        df.at[idx, "basic_rag_answer"] = result["generated_answer"]
+        df.at[idx, "basic_rag_grounding"] = json.dumps(result["contexts"])
+
+        print(f"Progress: {row_number}/{total} queries completed.\n")
+
+    df.to_csv(output_path, index=False)
+    print(f"\nResults saved to: {output_path}")

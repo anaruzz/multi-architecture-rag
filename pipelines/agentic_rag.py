@@ -9,6 +9,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
 from langsmith import traceable
+import pandas as pd
 
 
 load_dotenv("../.env")
@@ -103,16 +104,45 @@ graph_builder.set_entry_point("agent")
 graph_builder.add_edge("agent", END)
 graph = graph_builder.compile()
 
-# Run test query
-if __name__ == "__main__":
-    query = "How do I configure a VLAN on a Cisco switch?"
-    result = graph.invoke(
-        {"input": query, "output": ""},
-        config=RunnableConfig(tags=["langGraph", "agentic"], run_name="Agentic RAG Trace")
-    )
-    
-    print("\nFinal Answer:\n", result["output"])
 
-    print("\nRetrieved Contexts:")
-    for i, doc in enumerate(last_retrieved_docs, 1):
-        print(f"\nContext {i}:\n{doc.page_content}")
+
+
+
+
+if __name__ == "__main__":
+    input_path = "../Questions_and_Reference_Answers_100.csv"
+    output_path = "../output/agentic_rag_output.csv"
+
+    df = pd.read_csv(input_path)
+    df["agentic_rag_answer"] = ""
+    df["agentic_rag_grounding"] = ""
+
+    total = len(df)
+
+    for row_number, (idx, row) in enumerate(df.iterrows(), start=1):
+        query = row["query"]
+
+        print(f"🧠 [{row_number}/{total}] Running Agentic RAG on query: {query[:60]}...")
+
+        try:
+            result = graph.invoke(
+                {"input": query, "output": ""},
+                config=RunnableConfig(tags=["agentic", f"query_{row_number}"], run_name=f"agentic_query_{row_number}")
+            )
+
+            df.at[idx, "agentic_rag_answer"] = result["output"]
+            df.at[idx, "agentic_rag_grounding"] = "\n\n".join(doc.page_content for doc in last_retrieved_docs)
+
+            print("✅ Result saved.")
+
+        except Exception as e:
+            print(f"❌ Error at query {row_number}: {e}")
+            df.at[idx, "agentic_rag_answer"] = "ERROR"
+            df.at[idx, "agentic_rag_grounding"] = "ERROR"
+
+        if row_number % 10 == 0:
+            df.to_csv(output_path, index=False)
+            print(f"💾 Intermediate save after {row_number} queries.")
+
+    df.to_csv(output_path, index=False)
+    print(f"🎉 All done! Results saved to: {output_path}")
