@@ -1,18 +1,20 @@
 import os
 from dotenv import load_dotenv
+from langsmith import traceable
+from langchain_community.vectorstores import FAISS
+import os
+from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
 from langsmith import traceable
-import pandas as pd
-import json
+
 
 # FAISS Path
 FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
 FAISS_DIR = os.path.abspath(FAISS_DIR)
-
 
 # Load .env variables
 load_dotenv(dotenv_path="../.env") 
@@ -47,10 +49,10 @@ llm = OllamaLLM(model="openchat")
 def run_query(query: str) -> dict:
     # Step 1: retrieve docs
     docs = retriever.invoke(query)
-    
+
     # Step 2: build context
     context = "\n\n".join(doc.page_content for doc in docs)
-    
+
     # Step 3: generate answer
     filled_prompt = prompt.format(context=context, question=query)
     answer = llm.invoke(filled_prompt)
@@ -63,32 +65,12 @@ def run_query(query: str) -> dict:
     }
 
 
-
-
 if __name__ == "__main__":
-<<<<<<< HEAD
-    input_path = "../Questions_and_Reference_Answers_100.csv"
-    output_path = "../output/basic_rag_output.csv"
-=======
     query = "How to configure a Vlan on a cisco switch?"
     result = run_query(query)
     print("Answer:", result)
->>>>>>> 8490c381803503fd8c142b3f39f8033cc2ab7001
 
-    df = pd.read_csv(input_path)
-    df["basic_rag_answer"] = ""
-    df["basic_rag_grounding"] = ""
-
-    total = len(df)
-
-    for row_number, (idx, row) in enumerate(df.iterrows(), start=1):
-        query = row["query"]
-        result = run_query(query)
-
-        df.at[idx, "basic_rag_answer"] = result["generated_answer"]
-        df.at[idx, "basic_rag_grounding"] = json.dumps(result["contexts"])
-
-        print(f"Progress: {row_number}/{total} queries completed.\n")
-
-    df.to_csv(output_path, index=False)
-    print(f"\nResults saved to: {output_path}")
+    print("\nGenerated Answer:\n", result["generated_answer"])
+    print("\nRetrieved Contexts:")
+    for i, ctx in enumerate(result["contexts"], 1):
+        print(f"\nContext {i}:\n{ctx}")

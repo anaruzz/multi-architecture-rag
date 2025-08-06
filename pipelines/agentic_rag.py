@@ -9,7 +9,6 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
 from langsmith import traceable
-import pandas as pd
 
 
 load_dotenv("../.env")
@@ -17,7 +16,6 @@ load_dotenv("../.env")
 # FAISS Path
 FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
 FAISS_DIR = os.path.abspath(FAISS_DIR)
-
 
 # Embedding + Vectorstore setup
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -67,8 +65,8 @@ Observation: the result of the action
 (Repeat Thought → Action → Action Input → Observation as needed.)
 
 IMPORTANT:
-⚠️ NEVER output a Final Answer in the same step as an Action or Observation.  
-⚠️ Only after completing all actions, respond with:
+NEVER output a Final Answer in the same step as an Action or Observation.  
+Only after completing all actions, respond with:
 
 Thought: I now know the final answer.  
 Final Answer: <your answer here>
@@ -109,44 +107,27 @@ graph_builder.add_edge("agent", END)
 graph = graph_builder.compile()
 
 
+def run_query(query: str) -> dict:
+    global last_retrieved_docs
 
+    result = graph.invoke(
+        {"input": query, "output": ""},
+        config=RunnableConfig(tags=["langGraph", "agentic"], run_name="Agentic RAG Run")
+    )
+
+    return {
+        "generated_answer": result["output"],
+        "contexts": [doc.page_content for doc in last_retrieved_docs]
+    }
 
 
 
 if __name__ == "__main__":
-    input_path = "../Questions_and_Reference_Answers_100.csv"
-    output_path = "../output/agentic_rag_output.csv"
+    test_query = "How do I configure a VLAN on a Cisco switch?"
+    result = run_query(test_query)
 
-    df = pd.read_csv(input_path)
-    df["agentic_rag_answer"] = ""
-    df["agentic_rag_grounding"] = ""
+    print("\nFinal Answer:\n", result["generated_answer"])
 
-    total = len(df)
-
-    for row_number, (idx, row) in enumerate(df.iterrows(), start=1):
-        query = row["query"]
-
-        print(f"🧠 [{row_number}/{total}] Running Agentic RAG on query: {query[:60]}...")
-
-        try:
-            result = graph.invoke(
-                {"input": query, "output": ""},
-                config=RunnableConfig(tags=["agentic", f"query_{row_number}"], run_name=f"agentic_query_{row_number}")
-            )
-
-            df.at[idx, "agentic_rag_answer"] = result["output"]
-            df.at[idx, "agentic_rag_grounding"] = "\n\n".join(doc.page_content for doc in last_retrieved_docs)
-
-            print("✅ Result saved.")
-
-        except Exception as e:
-            print(f"❌ Error at query {row_number}: {e}")
-            df.at[idx, "agentic_rag_answer"] = "ERROR"
-            df.at[idx, "agentic_rag_grounding"] = "ERROR"
-
-        if row_number % 10 == 0:
-            df.to_csv(output_path, index=False)
-            print(f"💾 Intermediate save after {row_number} queries.")
-
-    df.to_csv(output_path, index=False)
-    print(f"🎉 All done! Results saved to: {output_path}")
+    print("\nRetrieved Contexts:")
+    for i, context in enumerate(result["contexts"], 1):
+        print(f"\nContext {i}:\n{context}")

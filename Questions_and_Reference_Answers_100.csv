@@ -239,24 +239,7 @@ What causes high latency or poor performance for wireless users?,"High latency o
 - AP overloading or misconfigured QoS
 
 Use site surveys and tools like Meraki’s RF Spectrum to identify RF noise. Solutions include optimizing AP placement, separating SSIDs by purpose, and enabling load balancing or minimum RSSI thresholds to offload weak connections."
-How do I navigate and edit configuration files in Cisco CLI?,"Cisco IOS CLI is command-line based and supports context-sensitive navigation. To edit configurations, enter global config mode:
-configure terminal
-
-From there, navigate into interface or line-specific contexts:
-interface GigabitEthernet0/1
-
-You can exit to previous levels using 'exit' and view context help with '?'.
-
-To save changes:
-write memory
-
-To review the current configuration:
-show running-config
-
-And to rollback:
-configure replace flash:backup-config
-
-Always be cautious before writing memory on production devices."
+How do I navigate and edit configuration files in Cisco CLI?,"To navigate and edit configurations in the Cisco CLI, enter global configuration mode using ""configure terminal"". From there, you can access specific interfaces or features (e.g., ""interface GigabitEthernet0/1"", ""line vty 0 4"") to make changes. Use ""exit"" to go up one level and ""end"" to return to privileged EXEC mode. To view the current running configuration, use ""show running-config"". To save your changes permanently, run ""copy running-config startup-config"". Cisco CLI does not use traditional text files for configuration � changes are made directly through command modes."
 What is MTU and why does it matter in network performance?,"MTU (Maximum Transmission Unit) defines the largest packet size (in bytes) that can be transmitted without fragmentation. For Ethernet, the default MTU is 1500 bytes.
 
 Issues arise when a device sends packets larger than the MTU of the next-hop device, causing fragmentation or packet drops — especially problematic for VPNs, GRE tunnels, or Jumbo frames in data centers.
@@ -266,17 +249,7 @@ show interface <name> | include MTU
 mtu 9000
 
 Adjusting MTU is crucial in optimizing performance and preventing hidden connectivity issues."
-How can I back up switch configurations to the cloud or external service?,"Cloud-managed devices like Meraki automatically back up configurations to the cloud, with version history and rollback options available in the dashboard.
-
-For non-cloud switches, you can automate backups to:
-- TFTP/SCP servers
-- SFTP storage (on newer Aruba/Cisco platforms)
-- Configuration management tools like Ansible or RANCID
-
-Example for a Cisco switch:
-copy running-config scp://admin@192.168.1.100/backup.cfg
-
-For long-term config hygiene, integrate with CI/CD pipelines or centralized logging solutions that store diffs and rollback points."
+How can I back up switch configurations to the cloud or external service?,"You can back up switch configurations by exporting them to an external server or cloud service. On Cisco devices, use TFTP, FTP, or SCP to export the running or startup config (e.g., ""copy running-config tftp:"" or ""copy startup-config scp:""). Ensure the remote server is reachable. On Aruba switches, use ""copy running-config scp"" via the CLI or Web UI. You can also automate regular backups with external scripts. For Meraki switches, configuration backups are automatically handled by the Meraki Dashboard and stored in the cloud."
 How do I verify if a switch port is delivering PoE power correctly?,"To check PoE status on Cisco switches:
 show power inline
 
