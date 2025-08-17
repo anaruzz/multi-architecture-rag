@@ -87,6 +87,9 @@ Rules you MUST follow:
 - For configuration questions, output concrete vendor-correct CLI commands found in the documents; avoid generic explanations.
 - After every `Action:` you MUST include an `Action Input:` line with a short keyword query in quotes.
 - Do NOT write sentences after `Action:`; only the exact tool name.
+- Start the Final Answer with the exact CLI or steps only. Do not restate the question.
+- If the question is conceptual (no CLI), answer in ≤3 sentences, directly addressing the question.
+- Match the vendor and OS in the retrieved documents. Do NOT mix vendors (e.g., Cisco vs. Aruba vs. Meraki).
 
 
 Example (follow EXACTLY):
