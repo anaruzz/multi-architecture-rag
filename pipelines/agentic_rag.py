@@ -17,22 +17,24 @@ load_dotenv("../.env")
 FAISS_DIR = os.path.join(os.path.dirname(__file__), "..", "faiss_index")
 FAISS_DIR = os.path.abspath(FAISS_DIR)
 
-# Embedding + Vectorstore setup
+# Embeddings
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
+
+# retriever
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 
-last_retrieved_docs = []
 
 # retriever tool function
+last_retrieved_docs = []
 def retriever_tool_func(query: str) -> str:
     global last_retrieved_docs
     docs = retriever.invoke(query)
     last_retrieved_docs = docs
     return "\n\n".join(doc.page_content for doc in docs[:3]) if docs else "No documents found."
 
-# Tool config
+# Search doc Tool
 search_docs_tool = Tool(
     name="search_docs",
     func=retriever_tool_func,
@@ -41,8 +43,10 @@ search_docs_tool = Tool(
 
 tools = [search_docs_tool]
 
+
 # LLM
 llm = OllamaLLM(model="openchat")
+
 
 # ReAct prompt
 tool_names = ", ".join([tool.name for tool in tools])
@@ -64,18 +68,31 @@ Observation: the result of the action
 
 (Repeat Thought → Action → Action Input → Observation as needed.)
 
-IMPORTANT:
-NEVER output a Final Answer in the same step as an Action or Observation.  
-Only after completing all actions, respond with:
+IMPORTANT RULES (follow exactly):
+- Do NOT write any explanation inside `Action:` — only use one of: [{tool_names}]
+- Every `Action:` MUST be followed by an `Action Input:` in the next line.
+- If you break the format, you will receive an error and fail.
+- NEVER output a Final Answer in the same step as an Action or Observation.
 
-Thought: I now know the final answer.  
-Final Answer: <your answer here>
+Example (follow this exact format step by step):
 
-Begin!
+Question: How do I configure a trunk port on a Cisco switch?
+Thought: I need to search the documentation for trunk port config steps.
+Action: search_docs
+Action Input: "Cisco configure trunk port"
+Observation: The steps are: 1. Enter interface config mode... 2. Use `switchport mode trunk`...
+
+Thought: I now know the final answer.
+Final Answer: To configure a trunk port on a Cisco switch, enter the interface config mode and run `switchport mode trunk`.
+
+⚠️ WARNING: Any mistake in this format will result in failure. You must use `Action:` followed by `Action Input:` and only use tools from the list: [{tool_names}]
+If you fail to follow the exact format, your response will be rejected and no answer will be returned.
+Do not write multiple things on the same line. Each line must begin with: Thought:, Action:, Action Input:, Observation:, or Final Answer:
 
 Question: {input}
 {agent_scratchpad}"""
 )
+
 
 
 # Agent
@@ -86,10 +103,10 @@ agent_executor = AgentExecutor(
     tools=tools,
     verbose=True,
     handle_parsing_errors=True,
-    max_iterations=5
+    max_iterations=12
 )
 
-# Define LangGraph state
+# LangGraph agent state
 class AgentState(TypedDict):
     input: str
     output: str
@@ -97,7 +114,9 @@ class AgentState(TypedDict):
 @traceable(name="Agentic RAG Run")
 def run_agent(state: AgentState) -> AgentState:
     result = agent_executor.invoke({"input": state["input"]})
-    return {"input": state["input"], "output": result}
+    final_output = result["output"] if isinstance(result, dict) and "output" in result else result
+
+    return {"input": state["input"], "output": final_output}
 
 # Build LangGraph
 graph_builder = StateGraph(state_schema=AgentState)
@@ -123,11 +142,12 @@ def run_query(query: str) -> dict:
 
 
 if __name__ == "__main__":
-    test_query = "How do I configure a VLAN on a Cisco switch?"
+    test_query = "What causes high latency or poor performance for wireless users?"
     result = run_query(test_query)
 
-    print("\nFinal Answer:\n", result["generated_answer"])
+    print("\n Type of generated_answer:", type(result["generated_answer"]))
+    print("\n Generated Answer:\n", result["generated_answer"])
 
-    print("\nRetrieved Contexts:")
+    print("\n Retrieved Contexts:")
     for i, context in enumerate(result["contexts"], 1):
         print(f"\nContext {i}:\n{context}")
